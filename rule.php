@@ -24,7 +24,14 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once($CFG->dirroot . '/mod/quiz/accessrule/accessrulebase.php');
+// Lower than Moodle 4.2.
+global $CFG;
+if ($CFG->version < 2023042400.00) {
+    require_once($CFG->dirroot . '/mod/quiz/accessrule/accessrulebase.php');
+    class_alias(quiz_access_rule_base::class, mod_quiz\local\access_rule_base::class);
+    class_alias(quiz::class, mod_quiz\quiz_settings::class);
+    class_alias(quiz_attempt::class, mod_quiz\quiz_attempt::class);
+}
 
 /**
  * Rule class.
@@ -44,7 +51,7 @@ class quizaccess_onesession extends quiz_access_rule_base {
      *      time limits by the mod/quiz:ignoretimelimits capability.
      * @return quiz_access_rule_base|null the rule, if applicable, else null.
      */
-    public static function make(quiz $quizobj, $timenow, $canignoretimelimits) {
+    public static function make(\mod_quiz\quiz_settings $quizobj, $timenow, $canignoretimelimits) {
         if (!empty($quizobj->get_quiz()->onesessionenabled)) {
             return new self($quizobj, $timenow);
         } else {
@@ -102,7 +109,7 @@ class quizaccess_onesession extends quiz_access_rule_base {
         }
         // Do not lock preview. We cannot clear quizaccess_onesession_sess, because current_attempt_finished and event observers
         // are not called on preview finish.
-        $attemptobj = quiz_attempt::create($attemptid);
+        $attemptobj = \mod_quiz\quiz_attempt::create($attemptid);
         if ($attemptobj->is_preview()) {
             return false;
         }
@@ -178,11 +185,11 @@ class quizaccess_onesession extends quiz_access_rule_base {
         if (empty($attemptid)) {
             return;
         }
-        $attemptobj = quiz_attempt::create($attemptid);
+        $attemptobj = \mod_quiz\quiz_attempt::create($attemptid);
         if ($attemptobj->is_preview()) {
             return;
         }
-        if ($attemptobj->get_state() != quiz_attempt::IN_PROGRESS) {
+        if ($attemptobj->get_state() != \mod_quiz\quiz_attempt::IN_PROGRESS) {
             return;
         }
         if (!$DB->record_exists('quizaccess_onesession_sess', array('attemptid' => $attemptid))) {
